@@ -1,0 +1,15 @@
+{
+  "name": "bosh-fifo-cpi",
+  "version": "0.1.0",
+  "description": "Bosh CPI for Fifo",
+  "main": "index.js",
+  "bin": {
+    "fifo_cpi": "./bin/cpi"
+  },
+  "author": "Phillip Neumann <pneumann@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "nfifo": "^0.1.2",
+    "uuid": "^1.4.1"
+  }
+}

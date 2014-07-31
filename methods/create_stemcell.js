@@ -58,7 +58,7 @@ function createManifest(config, opts) {
 			}
 		],
 		description: '',
-		homepage: 'https://docs.project-fifo.net/',
+		homepage: 'https://github.com/killfill/bosh-fifo-cpi/',
 		urn: '',
 		requirements: {
 			networks: [{

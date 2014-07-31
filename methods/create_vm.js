@@ -9,8 +9,11 @@ function check_if_vm_would_succeed(fifo, data, cb) {
 
 
 		//Check for the network
+		if (!data.config.networks.net0)
+			return cb('No network was specified')
+
 		fifo.send('networks').get(data.config.networks.net0, function(err, res) {
-			if (err || res.statusCode != 200)
+			if (err || res.statusCode != 200)
 				return cb('Cloud not get network: ' + res.statusCode)
 
 
@@ -66,7 +69,7 @@ function fake_create_vm_response(ip, fifo, response) {
 }
 
 module.exports = function(fifo, args, response) {
-	var directorUUID = args[0],
+	var agentId = args[0], //Agent uuid assigned by bosh. This should probably go into /var/vcap/bosh/dummy-cpi-agent-env.json:agent_id ...
 		dataset = args[1],
 		resourceProperty = args[2],
 		networkProperty = args[3]
@@ -98,14 +101,18 @@ module.exports = function(fifo, args, response) {
 			networks: {
 				net0: networkProperty.bosh.cloud_properties.net_id
 			},
-			alias: 'fifo_cpi_' + new Date().getTime()
+			alias: 'bosh-' + new Date().getTime()
 		},
+		metadata: {
+			jingles: {color: '#fbd75b'}, //Paint the vm created by bosh in yellow, just for funkiness..
+			bosh: {agent_id: agentId} //Save the assigned agent id to the vm, so it can get that value after...
+		}
 	}
 
 	if (networkProperty.bosh.dns)
 		data.config.resolvers = networkProperty.bosh.dns
 
-	if (credentials.bosh.password)
+	if (credentials.bosh && credentials.bosh.password)
 		data.bosh_pass = credentials.bosh.password
 
 	//Test the VM to catch up some errors, before actually creating the vm...

@@ -68,6 +68,21 @@ function fake_create_vm_response(ip, fifo, response) {
 	})
 }
 
+function addMetadata(fifo, newVm, agentId, cb) {
+
+	//Dont mind if this fails...
+	fifo.send('vms').put({
+		args: [newVm, 'metadata', 'jingles'],
+		body: {color: '#fbd75b'}
+	}, function(err, res) {})
+
+	fifo.send('vms').put({
+		args: [newVm, 'metadata', 'bosh'],
+		body: {agent_id: agentId}
+	}, cb)
+
+}
+
 module.exports = function(fifo, args, response) {
 	var agentId = args[0], //Agent uuid assigned by bosh. This should probably go into /var/vcap/bosh/dummy-cpi-agent-env.json:agent_id ...
 		dataset = args[1],
@@ -101,11 +116,7 @@ module.exports = function(fifo, args, response) {
 			networks: {
 				net0: networkProperty.bosh.cloud_properties.net_id
 			},
-			alias: 'bosh-' + new Date().getTime()
-		},
-		metadata: {
-			jingles: {color: '#fbd75b'}, //Paint the vm created by bosh in yellow, just for funkiness..
-			bosh: {agent_id: agentId} //Save the assigned agent id to the vm, so it can get that value after...
+			alias: 'bosh-' + agentId.slice(0,6)
 		}
 	}
 
@@ -144,11 +155,16 @@ module.exports = function(fifo, args, response) {
 
 			var newVm = res.headers.location.split('/').pop()
 
-			response({
-				error: null,
-				log: 'create_vm ' + newVm,
-				result: newVm
+			//Add some metadata to the VM
+			addMetadata(fifo, newVm, agentId, function(err, res) {
+
+				response({
+					error: null,
+					log: 'create_vm ' + newVm,
+					result: newVm
+				})
 			})
+
 		})
 	})
 

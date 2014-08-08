@@ -1,4 +1,5 @@
-
+var uuid = require('uuid'),
+	fs = require('fs')
 
 function uploadZvol(fifo, fileName, uuid, response){
 
@@ -57,7 +58,7 @@ function createManifest(config, opts) {
 				compression: 'gzip'
 			}
 		],
-		description: '',
+		description: 'Bosh Stemcell for FiFo, based on the Centos image of Bosh for OpenStack. Uses Go agent.',
 		homepage: 'https://github.com/killfill/bosh-fifo-cpi/',
 		urn: '',
 		requirements: {
@@ -73,9 +74,8 @@ function createManifest(config, opts) {
 		cpu_type: 'host',
 	}
 
-	mani.name = config.name,
-	mani.version = config.version,
-	mani.description = 'Bosh Stemcell for FiFo',
+	mani.name = config.name
+	mani.version = config.version
 	mani.urn = 'sdc:bosh:' + config.name + ':' + config.version
 	mani.uuid = opts.uuid
 	mani.files[0].size = opts.size
@@ -91,7 +91,6 @@ module.exports = function(fifo, args, response) {
 		config = args[1]
 
 
-
 	//Check the state of the dataset wanted to be uploaded
 	fifo.send('datasets').get(function(err, res, body) {
 
@@ -101,17 +100,20 @@ module.exports = function(fifo, args, response) {
 				existingDataset = dataset
 		})
 
+		//In Fifo < 0.6.0, the id of the dataset is .dataset, >= 0.6.0 .uuid ...
+		var datasetId = existingDataset && existingDataset.uuid
+
 		//if the semcell already exists, be nice and return its uuid
 		if (existingDataset && existingDataset.status != 'pending')
 			return response({
-				result: existingDataset.dataset,
-				log: 'Image already exists:' + existingDataset.name + ' ' + existingDataset.version + '(' + existingDataset.status + '). Returning uuid ' + existingDataset.dataset,
+				result: datasetId,
+				log: 'Image already exists:' + existingDataset.name + ' ' + existingDataset.version + '(' + existingDataset.status + '). Returning uuid ' + datasetId,
 				error: null
 			})
 
 		//If manifest is in pending state, send just the zvol.
 		if (existingDataset && existingDataset.status == 'pending')
-			return uploadZvol(fifo, fileName, existingDataset.dataset, response)
+			return uploadZvol(fifo, fileName, datasetId, response)
 
 		var manifest = createManifest(config, {
 			uuid: uuid.v4(), //random uuid

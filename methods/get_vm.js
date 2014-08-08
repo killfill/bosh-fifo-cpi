@@ -4,15 +4,14 @@ module.exports = function(fifo, args, response) {
 
 	fifo.send('vms').get(uuid, function(err, res) {
 
-
 		//Errors
-		if (err) {
-			response({
+		if (err || res.statusCode >= 500) {
+			return response({
 				result: null,
 				log: 'vm_get failed. ' + uuid,
 				error: {
 					type: 'Bosh::Clouds::CloudError',
-					message: err.message,
+					message: err && err.message || res.statusCode.toString(),
 					ok_to_retry: false
 				}
 			})
@@ -44,12 +43,14 @@ module.exports = function(fifo, args, response) {
 			})
 
 
+		//In case the ip has not been set up jet in the vm (i.e. when dataset is been tranfered to the hypervisor) use the one that has been mapped.
+		var ip = res.body.config.networks[0].ip || Object.keys(res.body.network_mappings)[0]
 		return response({
 			error: null,
 			log: 'vm_get ' + uuid,
 			result: {
-				private_ip_address: res.body.config.networks[0].ip,
-				floating_ip_address: res.body.config.networks[0].ip,
+				private_ip_address: ip,
+				floating_ip_address: ip,
 				name: res.body.config.alias
 			}
 		})

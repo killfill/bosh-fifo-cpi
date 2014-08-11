@@ -11,5 +11,9 @@
   "dependencies": {
     "nfifo": "^0.1.2",
     "uuid": "^1.4.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/killfill/bosh-fifo-cpi"
+  },
 }

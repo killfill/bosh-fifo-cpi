@@ -36,6 +36,9 @@ module.exports = {
 			})
 		}
 
+		//Setup the HOME env, so nfifo knows where to read the config file with the credentials.
+		process.env.HOME = '/var/vcap'
+
 		//Connect and run!
 		nFifo.connect(function(fifo) {
 

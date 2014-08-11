@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+//Setup the HOME env, so nfifo knows where to read the config file with the credentials.
+//Ruby popen3 is not setting it...
+if (!process.env.HOME)
+	process.env.HOME = '/var/vcap'
+
 var nFifo = require('nfifo'),
 	fs = require('fs'),
 	uuid = require('uuid')
@@ -36,8 +41,6 @@ module.exports = {
 			})
 		}
 
-		//Setup the HOME env, so nfifo knows where to read the config file with the credentials.
-		process.env.HOME = '/var/vcap'
 
 		//Connect and run!
 		nFifo.connect(function(fifo) {

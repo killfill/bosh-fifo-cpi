@@ -15,4 +15,4 @@ fi
 
 echo Coping to $REMOTE ...
 rsync -avzr --delete --exclude node_modules . root@${REMOTE}:/var/vcap/jobs/fifo-cpi
-ssh root@${REMOTE} "cd /var/vcap/jobs/fifo-cpi; yum install -y npm; npm install; echo -e \"[fifo_default]\napiversion = 0.1.0\nhost = $FIFO\nuser = $USER\npass = $PASS\n\" > /var/vcap/.fifo"
+ssh root@${REMOTE} "cd /var/vcap/jobs/fifo-cpi; yum install -y npm; npm install; echo -e \"[fifo_default]\napiversion = 0.1.0\nhost = $FIFO\nuser = $USER\npass = $PASS\n\" > /var/vcap/.fifo; chown vcap:vcap /var/vcap/.fifo"

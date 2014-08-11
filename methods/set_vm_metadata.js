@@ -9,13 +9,13 @@ module.exports = function(fifo, args, response) {
 
 		if (err || res.statusCode >= 300)
 			return response({
+				result: null,
+				log: 'Could not set metadata ' + (err && err.message || res.body || res.statusCode),
 				error: {
-					type: 'Body::Clouds::CloudError',
+					type: 'Bosh::Clouds::CloudError',
 					message: 'Could not set metadata ' + (err && err.message || res.body || res.statusCode),
 					ok_to_retry: false
-				},
-				log: 'Could not set metadata' + (err && err.message || res.body || res.statusCode),
-				result: null
+				}
 			})
 
 		if (--n<=0)
@@ -29,10 +29,8 @@ module.exports = function(fifo, args, response) {
 
 	Object.keys(hash).forEach(function(k) {
 		// var obj = {args: [vm, 'metadata', 'bosh']} //Fifo metadata
-		var obj = {args: vm} //Use smartos metadata, so the values can be read from inside the VM.
-		obj.body = {}
-		obj.body[k] = hash[k]
-
+		var obj = {args: vm, body: {config: {metadata: {}}}} //Use smartos metadata, so the values can be read from inside the VM.
+		obj.body.config.metadata[k] = hash[k]
 		fifo.send('vms').put(obj, cb)
 	})
 

@@ -1,18 +1,41 @@
 #!/usr/bin/env node
 
-var fifoCpi = require('../index')
+var fifoCpi = require('../index'),
+	fs = require('fs')
 
 var input = ''
 process.stdin.on('data', function(d) {input+= d})
 process.stdin.on('end', function() {
 
 	input = JSON.parse(input)
+	debug(input.arguments[0], input.method, 'req', input)
 
 	fifoCpi
 		.method(input.method)
 		.withArguments(input.arguments)
 		.end(function result(res) {
+			debug(input.arguments[0], input.method, 'res', res)
 			console.log(JSON.stringify(res))
 		})
 
 })
+
+
+process.on('uncaughtException', function(err) {
+	var h = {
+		error: {
+			type: 'Bosh::Clouds::CloudError',
+			message: err.toString(),
+			ok_to_retry: false
+		},
+		log: 'Global Fail: ' + input.method + ' -> ' +  err.toString() + '. Arguments: ' + input.arguments,
+		result: null
+	}
+	console.log(JSON.stringify(h))
+});
+
+
+var id = require('uuid').v4().slice(0,5)
+function debug(id, operation, t, content) {
+	fs.writeFileSync('/tmp/fifo-cpi-' + id.slice(0,5) + '-' + operation + '-' + t, JSON.stringify(content))
+}

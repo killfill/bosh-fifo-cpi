@@ -5,7 +5,7 @@ module.exports = function(fifo, args, response) {
 	fifo.send('vms').get(uuid, function(err, res) {
 
 		//Errors
-		if (err || res.statusCode >= 500) {
+		if (err || res.statusCode >= 500) {
 			return response({
 				result: null,
 				log: 'vm_get failed. ' + uuid,

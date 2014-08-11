@@ -1,3 +1,4 @@
+var fs = require('fs')
 
 function check_if_vm_would_succeed(fifo, data, cb) {
 	//Callbacks hell...
@@ -23,10 +24,10 @@ function check_if_vm_would_succeed(fifo, data, cb) {
 					return cb('Cloud not get package: ' + res.statusCode)
 
 
-				//Dry run
+				//Dry run.
 				fifo.send('vms/dry_run').put({body: data}, function(err, res) {
 					if (err || res.statusCode > 300)
-						return cb(err || res.body || res.statusCode)
+						return cb(err || res.body || res.statusCode, true)
 
 					cb(null)
 				})
@@ -68,20 +69,31 @@ function fake_create_vm_response(ip, fifo, response) {
 	})
 }
 
-function addMetadata(fifo, newVm, agentId, cb) {
+function waitForVM(fifo, newVm, cb) {
 
-	//Dont mind if this fails...
-	fifo.send('vms').put({
-		args: [newVm, 'metadata', 'jingles'],
-		body: {color: '#fbd75b'}
-	}, function(err, res) {})
 
-	fifo.send('vms').put({
-		args: [newVm, 'metadata', 'bosh'],
-		body: {agent_id: agentId}
-	}, cb)
+	function loop() {
+
+		fifo.send('vms').get(newVm, function(err, res) {
+			if (err) return cb(err)
+			if (res.statusCode != 200) return cb(res.statusCode)
+
+			if (res.body.state.indexOf('fail') > -1)
+				return cb(res.body.state)
+
+			if (res.body.state === 'running')
+				return cb()
+
+			//There is a change the vm is stuck. Just let bosh timeout.
+			setTimeout(loop, 1000)
+
+		})
+	}
+
+	loop()
 
 }
+
 
 module.exports = function(fifo, args, response) {
 	var agentId = args[0], //Agent uuid assigned by bosh. This should probably go into /var/vcap/bosh/dummy-cpi-agent-env.json:agent_id ...
@@ -94,9 +106,8 @@ module.exports = function(fifo, args, response) {
 	var type = networkProperty.bosh.type
 
 	//For test propouses
-	if (type === 'fake') {
+	if (type === 'fake')
 		return fake_create_vm_response(networkProperty.bosh.ip, fifo, response)
-	}
 
 	if (type !== 'dynamic')
 		return response({
@@ -116,7 +127,11 @@ module.exports = function(fifo, args, response) {
 			networks: {
 				net0: networkProperty.bosh.cloud_properties.net_id
 			},
-			alias: 'bosh-' + agentId.slice(0,6)
+			alias: 'bosh-' + agentId.slice(0,6),
+			metadata: {
+				agent_id: agentId,
+				'user-script': fs.readFileSync(__dirname + '/../bin/setup-bosh-config.sh', 'utf-8')
+			}
 		}
 	}
 
@@ -127,7 +142,7 @@ module.exports = function(fifo, args, response) {
 		data.bosh_pass = credentials.bosh.password
 
 	//Test the VM to catch up some errors, before actually creating the vm...
-	check_if_vm_would_succeed(fifo, data, function(error) {
+	check_if_vm_would_succeed(fifo, data, function(error, please_try) {
 
 		if (error)
 			return response({
@@ -136,7 +151,7 @@ module.exports = function(fifo, args, response) {
 				error: {
 					type: 'Bosh::Clouds::VMCreationFailed',
 					message: 'Would not succeed. Error: ' + error,
-					ok_to_retry: false
+					ok_to_retry: please_try === true
 				}
 			})
 
@@ -155,18 +170,33 @@ module.exports = function(fifo, args, response) {
 
 			var newVm = res.headers.location.split('/').pop()
 
-			//Add some metadata to the VM
-			addMetadata(fifo, newVm, agentId, function(err, res) {
+			//Show the VM in yellow
+			fifo.send('vms').put({args: [newVm, 'metadata', 'jingles'], body: {color: '#fbd75b'}}, function() {})
+
+			//Wait until the VM is ready. If not, bosh will trigger a metadata update, high chance the vm is not on the hypervisor jet, and that call assumes its there...
+			waitForVM(fifo, newVm, function(err) {
+
+				if (err)
+					return response({
+						error: {
+							type: 'Bosh::Clouds::CloudError',
+							message: err.toString(),
+							ok_to_retry: false
+						},
+						log: 'create_vm failed: ' + err.toString(),
+						result: null
+					})
 
 				response({
 					error: null,
 					log: 'create_vm ' + newVm,
 					result: newVm
 				})
+
 			})
+
 
 		})
 	})
-
 
 }

@@ -1,10 +1,34 @@
 PATH=$PATH:/usr/sbin/
 AGENT_ID=$(mdata-get agent_id)
-BOSH_HOST=bosh-host
 
-#Ensure bosh-host resolvs to the IP of bosh... 
-#TODO: how do i get the IP directly?...
+#CPI will replace this:
+BOSH_HOST=BOSH_HOST_REPLACE
+NETWORK_NAME=NETWORK_NAME_REPLACE
 
+#Override openstack mode for dummy mode.
+echo dummy > /var/vcap/bosh/etc/infrastructure
+
+#Check if we are deploying bosh micro...
+if [[ $AGENT_ID == bm-* ]]; then
+
+# "agent_id": "not_configured",
+
+cat > /var/vcap/bosh/dummy-cpi-agent-env.json << EOF
+{
+  "agent_id": "$AGENT_ID",
+  "mbus": "https://vcap:b00tstrap@0.0.0.0:6868",
+  "blobstore": {
+    "provider": "local",
+    "options": {
+      "blobstore_path": "/var/vcap/micro_bosh/data/cache"
+    }
+  }
+}
+EOF
+
+else
+
+#A bosh managed VM
 cat > /var/vcap/bosh/dummy-cpi-agent-env.json << EOF
 {
   "agent_id": "${AGENT_ID}",
@@ -18,7 +42,7 @@ cat > /var/vcap/bosh/dummy-cpi-agent-env.json << EOF
     }
   },
   "networks": {
-    "bosh": {
+    "${NETWORK_NAME}": {
       "cloud_properties": {},
       "type": "dynamic"
     }
@@ -29,4 +53,6 @@ cat > /var/vcap/bosh/dummy-cpi-agent-env.json << EOF
 }
 EOF
 
-kill `pgrep bosh-agent`
+fi
+
+kill `pgrep bosh-agent` || true

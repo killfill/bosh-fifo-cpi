@@ -58,7 +58,7 @@ function createManifest(config, opts) {
 				compression: 'gzip'
 			}
 		],
-		description: 'Bosh Stemcell for FiFo, based on the Centos image of Bosh for OpenStack. Uses Go agent.',
+		description: 'Bosh Stemcell for FiFo, based on the image of Bosh for OpenStack. Uses Go agent.',
 		homepage: 'https://github.com/killfill/bosh-fifo-cpi/',
 		urn: '',
 		requirements: {

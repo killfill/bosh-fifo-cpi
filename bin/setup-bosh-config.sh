@@ -1,5 +1,6 @@
 PATH=$PATH:/usr/sbin/
 AGENT_ID=$(mdata-get agent_id)
+VM_UUID=$(mdata-get vm_uuid)
 
 #CPI will replace this:
 BOSH_HOST=BOSH_HOST_REPLACE
@@ -8,10 +9,24 @@ NETWORK_NAME=NETWORK_NAME_REPLACE
 #Override openstack mode for dummy mode.
 echo dummy > /var/vcap/bosh/etc/infrastructure
 
+#Mount our persistent disk, in /var/vcap/store instead of the default /data.
+umount /data
+sed -i /vdb1/d /etc/fstab
+mkdir -p /var/vcap/store
+printf "/dev/vdb1\t\t/var/vcap/store\t\t\text4\tdefaults\t0 0\n" >> /etc/fstab
+mount /var/vcap/store
+
+#Prior intent was making bosh-agent hndle the persisten disk, but didnt worked well. problesm with
+#VM_UUID is not longer necesarry, but will just keep it there.
+# "disks": {
+#   "persistent": {
+#     "vol-${VM_UUID}": "/dev/vdb"
+#   }
+# },
+
+
 #Check if we are deploying bosh micro...
 if [[ $AGENT_ID == bm-* ]]; then
-
-# "agent_id": "not_configured",
 
 cat > /var/vcap/bosh/dummy-cpi-agent-env.json << EOF
 {

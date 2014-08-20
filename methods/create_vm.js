@@ -104,7 +104,8 @@ module.exports = function(fifo, args, response) {
 		credentials = args[5]
 
 	//Only support 1 network for now. The key is defined in the user manifest.
-	var networkKey = Object.keys(networkProperty)[0],
+	var networkKeys = Object.keys(networkProperty)
+	var networkKey = networkKeys[0],
 		network = networkProperty[networkKey]
 
 	//For test propouses
@@ -133,8 +134,9 @@ module.exports = function(fifo, args, response) {
 			metadata: {
 				agent_id: agentId,
 				'user-script': fs.readFileSync(__dirname + '/../bin/setup-bosh-config.sh', 'utf-8')
-									.replace('BOSH_HOST_REPLACE', os.networkInterfaces().eth0[0].address)
+									.replace('BOSH_HOST_REPLACE', os.networkInterfaces().eth0 ? os.networkInterfaces().eth0[0].address : 'probably-deploying-microbosh-on-osx')
 									.replace('NETWORK_NAME_REPLACE', networkKey)
+									// .replace('SECOND_NETWORK_NAME_REPLACE', networkKeys.length > 1 ? networkKeys[1]: 'ignore_me')
 			}
 		}
 	}
@@ -190,6 +192,9 @@ module.exports = function(fifo, args, response) {
 						log: 'create_vm failed: ' + err.toString(),
 						result: null
 					})
+
+				//Stick the vmUUID in the metadata just for reference. (using it on the persistent disk stuff. bosh-agent changes the hostname from vmUUID to agent_id...)
+				fifo.send('vms').put({args: newVm, body: {config: {metadata: {vm_uuid: newVm}}}}, function(){})
 
 				response({
 					error: null,

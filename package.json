@@ -9,7 +9,7 @@
   "author": "Phillip Neumann <pneumann@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "nfifo": "^0.1.2",
+    "nfifo": "^0.6.0",
     "uuid": "^1.4.1"
   },
   "repository": {
